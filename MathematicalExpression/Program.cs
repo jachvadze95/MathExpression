@@ -13,102 +13,142 @@ namespace MathematicalExpression
         {
             string expression = Console.ReadLine();
 
-            Console.WriteLine(evaluateExpression(Regex.Replace(expression, @"\s+", "")));
-            Console.ReadKey();
+            string formatedExpression = formatExpression(expression);
+            String[] expressionArr = new[] { formatedExpression };
+
+            eliminateBrackets(expressionArr);
+            double answer = evaluateExpression(expressionArr);
+
+            Console.WriteLine(answer);
+            Console.ReadKey(); 
         }
 
-
-        static double evaluateExpression(string expression)
+        private static string formatExpression(string expression)
         {
-            String[] expressionArr = new[] { expression };
+            var exp = Regex.Replace(expression, @"\s+", "");
 
-            //Get First Left Part
-            double left = getMostLeftPart(expressionArr);
-            expression = expressionArr[0];
-            if (expression.Length == 0)
+
+            var sb = new StringBuilder();
+            sb.Append(exp[0]);
+
+            for (int i = 1; i < exp.Length; i++)
             {
-                return left;
-            }
+                var ch = exp[i];
+                var prev = exp[i - 1];
 
-            char operand = expression[0];
-            expression = expression.Substring(1);
-
-            //Do Operation With Right Part Which Gets Evaluated Recursively
-            while (operand == '/' || operand == '*')
-            {
-                expressionArr[0] = expression;
-                double right = getMostLeftPart(expressionArr);
-                expression = expressionArr[0];
-
-                if (operand == '*')
+                if ((ch == '(' && prev == '(') || (ch == ')' && prev == ')'))
                 {
-                    left = left * right;
-                }
-                else
-                {
-                    left = left / right;
+                    continue;
                 }
 
-                if (expression.Length > 0)
+                if ((ch == '-' && prev == '-'))
                 {
-                    operand = expression[0];
-                    expression = expression.Substring(1);
+                    sb.Remove(i - 1, 1);
+                    sb.Append('+');
+
+                    continue;
                 }
-                else
-                {
-                    return left;
-                }
+
+                sb.Append(ch);
             }
 
-            if (operand == '+')
-            {
-                return left + evaluateExpression(expression);
-            }
-            else
-            {
-                return left - evaluateExpression(expression);
-            }
+            return sb.ToString();
         }
 
-        static double getMostLeftPart(String[] expArr)
+        private static void eliminateBrackets(string[] expressionArr)
         {
-            double val;
-            var item = expArr[0];
+            var item = expressionArr[0];
+            var sb = new StringBuilder();
 
-            if (item.StartsWith("("))
+            int lastOpenBracked = item.LastIndexOf('(');
+            if (lastOpenBracked == -1)
             {
-                int open = 1;
-                int len = 1;
-                while (open != 0)
-                {
-                    if (item[len] == '(')
-                    {
-                        open++;
-                    }
-                    else if (item[len] == ')')
-                    {
-                        open--;
-                    }
-                    len++;
-                }
-                val = evaluateExpression(item.Substring(1, len - 2));
-                expArr[0] = item.Substring(len);
+                return;
             }
-            else
+
+            int i = lastOpenBracked + 1;
+
+            while (item[i] != ')')
             {
-                int len = 1;
-                if (item[0] == '-')
-                {
-                    len++;
-                }
-                while (item.Length > len && isNum((int)item[len]))
-                {
-                    len++;
-                }
-                val = Double.Parse(item.Substring(0, len));
-                expArr[0] = item.Substring(len);
+                sb.Append(item[i]);
+                i++;
             }
-            return val;
+
+            int properClosingIndex = i;
+
+            double value = evaluateExpression(new[] { sb.ToString() });
+
+
+            sb.Insert(0, '(');
+            sb.Append(')');
+            expressionArr[0] = expressionArr[0].Replace(sb.ToString(), value.ToString());
+
+            eliminateBrackets(expressionArr);
+        }
+
+        static double evaluateExpression(string[] expressionArr)
+        {
+            string[] items = decoupleToArray(expressionArr[0]).ToArray();
+
+            while (items.Contains("/") || items.Contains("*"))
+            {
+                var i = Array.FindIndex(items, x => x == "/");
+
+                if (i != -1)
+                {
+                    items[i - 1] = (decimal.Parse(items[i - 1]) / decimal.Parse(items[i + 1])).ToString();
+                    Array.Clear(items, i - 1, 2);
+                }
+
+                var j = Array.FindIndex(items, x => x == "*");
+
+                if (j != -1)
+                {
+                    items[j - 1] = (decimal.Parse(items[j - 1]) * decimal.Parse(items[j + 1])).ToString();
+                    Array.Clear(items, j - 1, 2);
+                }
+            }
+
+            return items.Sum(x =>
+            {
+                if (int.TryParse(x, out var i))
+                {
+                    return i;
+                }
+
+                return 0;
+            });
+        }
+
+        private static IEnumerable<string> decoupleToArray(string v)
+        {
+            for (int i = 0; i < v.Length; i++)
+            {
+                var c = v[i];
+
+                if (c == '+')
+                    continue;
+
+                if (c == '/' || c == '*')
+                {
+                    yield return c.ToString();
+                }
+
+                int start = i;
+
+                if (c == '-')
+                {
+                    i++;
+                }
+
+                while (v.Length > i && isNum((int)v[i]))
+                {
+                    i++;
+                }
+
+                i--;
+                yield return v.Substring(start, i - start + 1);
+            }
         }
 
         static bool isNum(int c)
