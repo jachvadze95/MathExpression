@@ -97,7 +97,7 @@ namespace MathematicalExpression
                 if (i != -1)
                 {
                     items[i - 1] = (decimal.Parse(items[i - 1]) / decimal.Parse(items[i + 1])).ToString();
-                    Array.Clear(items, i - 1, 2);
+                    Array.Clear(items, i, 2);
                 }
 
                 var j = Array.FindIndex(items, x => x == "*");
@@ -105,7 +105,7 @@ namespace MathematicalExpression
                 if (j != -1)
                 {
                     items[j - 1] = (decimal.Parse(items[j - 1]) * decimal.Parse(items[j + 1])).ToString();
-                    Array.Clear(items, j - 1, 2);
+                    Array.Clear(items, j, 2);
                 }
             }
 
@@ -132,6 +132,7 @@ namespace MathematicalExpression
                 if (c == '/' || c == '*')
                 {
                     yield return c.ToString();
+                    continue;
                 }
 
                 int start = i;
